@@ -874,6 +874,19 @@ export const useMapStore = defineStore('cloudtak', {
                     // rebuild the source wholesale rather than trusting the
                     // increments
                     await this.resyncCOT();
+
+                    // Mission change notifications and their CoT payloads are
+                    // separate messages. Refresh loaded Missions in case iOS
+                    // suspended the WebView between the two.
+                    await Promise.allSettled(OverlayManager.missionOverlays().map(async (overlay) => {
+                        if (!overlay.mode_id) return;
+
+                        const sub = await Subscription.from(overlay.mode_id);
+                        if (!sub?.subscribed) return;
+
+                        await sub.feature.refresh();
+                        await this.renderMission(overlay.mode_id, sub);
+                    }));
                 } catch (err) {
                     console.error('Resume recovery failed:', err);
                 }
